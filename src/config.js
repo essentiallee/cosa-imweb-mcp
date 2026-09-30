@@ -17,5 +17,5 @@ export function config(env = process.env) {
   if (!Number.isInteger(port) || port < 1 || port > 65535 || !Number.isInteger(proxy) || proxy < 0 || proxy > 2) throw Error('Invalid port/proxy configuration');
   return { base: base.origin, port, host: env.HOST || '127.0.0.1', proxy, clientId: env.IMWEB_CLIENT_ID, clientSecret: env.IMWEB_CLIENT_SECRET,
     siteCode: env.IMWEB_SITE_CODE || '', adminPassword: env.ADMIN_PASSWORD, encryptionKey: env.TOKEN_ENCRYPTION_KEY,
-    tokenFile: path.resolve(env.TOKEN_FILE || '.data/imweb-tokens.enc'), mcpClientId: env.MCP_CLIENT_ID || 'cosa-chatgpt', mcpClientSecret: env.MCP_CLIENT_SECRET, redirects };
+    tokenFile: path.resolve(env.TOKEN_FILE || '.data/imweb-tokens.enc'), desktopRedirect: env.MCP_DESKTOP_REDIRECT_URI || '', mcpClientId: env.MCP_CLIENT_ID || 'cosa-chatgpt', mcpClientSecret: env.MCP_CLIENT_SECRET, redirects };
 }

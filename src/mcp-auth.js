@@ -7,7 +7,7 @@ export class OwnerOAuthProvider {
     this.pending = expiringMap(); this.codes = expiringMap(); this.access = expiringMap(); this.refresh = expiringMap();
     this.clientsStore = { getClient: async id => id === 'cosa-desktop' ? {
       client_id: 'cosa-desktop', client_name: 'COSA Desktop',
-      redirect_uris: ['http://127.0.0.1/callback', 'http://localhost/callback'],
+      redirect_uris: cfg.desktopRedirect ? [cfg.desktopRedirect] : [],
       token_endpoint_auth_method: 'none', grant_types: ['authorization_code', 'refresh_token'],
       response_types: ['code'], scope: MCP_SCOPE
     } : id === cfg.mcpClientId ? {
