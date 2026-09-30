@@ -1,3 +1,9 @@
+# 쓰기 기능 추가 (2026-09-30)
+
+사용자 승인으로 OAuth 요청 scope를 `site-info:write script:write`로 변경했습니다. 사이트 정보 read-only 요청 시 실제 아임웹 응답 30156에서 site-info:write가 필수임을 확인했습니다.
+
+공식 OpenAPI `/script`: GET(query unitCode/position, data 배열), POST/PUT(JSON unitCode/position/scriptContent, data boolean). 등록/수정에는 script:write가 필요합니다. 공식 명세를 다시 내려받아 이 계약으로 구현했습니다. 기존 스크립트는 수정 전 암호화 백업하며 쓰기는 자동 재시도하지 않습니다. 아래는 최초 구현 시의 조사 기록으로, 현재 권한은 이 상단 내용을 따릅니다.
+
 # 공식 명세 확인 기록
 
 확인일: 2026-09-30. 구형 `api.imweb.me/v2` API는 사용하지 않습니다.

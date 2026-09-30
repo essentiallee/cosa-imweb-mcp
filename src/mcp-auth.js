@@ -1,24 +1,29 @@
 import { InvalidGrantError, InvalidScopeError, InvalidTargetError, InvalidTokenError } from '@modelcontextprotocol/sdk/server/auth/errors.js';
 import { random, digest, equal, expiringMap, page, cookie, setCookie } from './security.js';
-export const MCP_SCOPE = 'site:read';
+export const MCP_SCOPE = 'site:manage';
 export class OwnerOAuthProvider {
   constructor(cfg) {
     this.cfg = cfg; this.resource = cfg.base + '/mcp';
     this.pending = expiringMap(); this.codes = expiringMap(); this.access = expiringMap(); this.refresh = expiringMap();
-    this.clientsStore = { getClient: async id => id === cfg.mcpClientId ? {
+    this.clientsStore = { getClient: async id => id === 'cosa-desktop' ? {
+      client_id: 'cosa-desktop', client_name: 'COSA Desktop',
+      redirect_uris: ['http://127.0.0.1/callback', 'http://localhost/callback'],
+      token_endpoint_auth_method: 'none', grant_types: ['authorization_code', 'refresh_token'],
+      response_types: ['code'], scope: MCP_SCOPE
+    } : id === cfg.mcpClientId ? {
       client_id: cfg.mcpClientId, client_secret: cfg.mcpClientSecret, redirect_uris: cfg.redirects,
       client_name: 'COSA ChatGPT', token_endpoint_auth_method: 'client_secret_post',
       grant_types: ['authorization_code', 'refresh_token'], response_types: ['code'], scope: MCP_SCOPE
     } : undefined };
   }
   checkResource(resource) { if (resource && resource.href !== this.resource) throw new InvalidTargetError('Unexpected MCP resource'); }
-  checkScopes(scopes) { if (scopes?.some(s => s !== MCP_SCOPE)) throw new InvalidScopeError('Only site:read is available'); }
+  checkScopes(scopes) { if (scopes?.some(s => s !== MCP_SCOPE)) throw new InvalidScopeError('Only site:manage is available'); }
   async authorize(client, params, res) {
     this.checkResource(params.resource); this.checkScopes(params.scopes);
     const transaction = random(), browser = random();
     this.pending.set(transaction, { clientId: client.client_id, ...params, browser: digest(browser) }, 600000);
     setCookie(res, 'cosa_consent', browser, this.cfg.base.startsWith('https:'));
-    res.type('html').send(page(`<p>ChatGPT에 COSA 사이트 기본 정보 조회 권한을 부여합니다.</p><p>로컬 .env의 ADMIN_PASSWORD를 입력하세요. 아임웹 비밀번호가 아닙니다.</p><form method="post" action="/consent"><input type="hidden" name="transaction" value="${transaction}"><label>소유자 승인 비밀번호 <input type="password" name="password" autocomplete="current-password" required></label><button>읽기 전용 연결 승인</button></form>`));
+    res.type('html').send(page(`<p>ChatGPT에 COSA 사이트 정보 조회 및 스크립트 등록·수정 권한을 부여합니다.</p><p>로컬 .env의 ADMIN_PASSWORD를 입력하세요. 아임웹 비밀번호가 아닙니다.</p><form method="post" action="/consent"><input type="hidden" name="transaction" value="${transaction}"><label>소유자 승인 비밀번호 <input type="password" name="password" autocomplete="current-password" required></label><button>조회·수정 연결 승인</button></form>`));
   }
   consent(req, res) {
     const id = req.body.transaction, p = this.pending.get(id);

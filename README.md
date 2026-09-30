@@ -1,9 +1,20 @@
-# COSA Imweb MCP — read-only MVP
+# COSA Imweb MCP
 
-COSA의 아임웹 사이트 정보를 ChatGPT에서 조회하는 Node.js 서버입니다. 고객용 `cosa-bags.com`은 그대로 유지하며 이 서버만 별도로 실행·배포합니다.
+COSA 사이트 정보 조회와 삽입 스크립트 등록·수정을 제공하는 Node.js MCP 서버입니다.
+2026-09-30 사용자 승인으로 쓰기 기능을 추가했습니다. 실제 사이트 스크립트 변경은 아직 실행하지 않았습니다.
 
-현재 구현: Imweb OAuth 승인 → 암호화된 access/refresh token 저장 → 사이트 정보 GET → MCP `get_site_info`.
-쓰기 API·쓰기 scope·사이트 수정 도구는 없습니다. OpenAI API key도 필요하지 않습니다.
+## 제공 도구와 권한
+
+- `get_site_info`: 사이트와 유닛 정보 조회
+- `get_script`: 특정 유닛/위치의 스크립트 및 revision 조회
+- `create_script`: 비어 있는 위치에 스크립트 등록
+- `update_script`: 기존 스크립트 전체 교체
+
+Imweb OAuth scope는 `site-info:write script:write`입니다. 개발자센터에서 두 API의 읽기·쓰기 권한을 활성화하고 저장한 뒤 다시 인증하세요. 실제 오류 30156에서 site-info:write가 필수임을 확인했습니다. ChatGPT→서버 권한은 `site:manage`입니다.
+
+수정은 실제 사이트에 반영됩니다. 먼저 조회하고 변경 내용을 사용자에게 보여준 뒤 실행하세요. 쓰기 도구는 MCP에 readOnlyHint=false로 표시됩니다. 수정 전 기존 내용을 `.data/script-backups/`에 암호화해 보관하며 조회 시 받은 revision이 달라지면 거절합니다. 이는 사전 충돌 검사이며 아임웹 API가 원자적 조건부 쓰기를 제공하는 것은 아니므로 동시에 편집하지 마세요. 네트워크 오류 후 쓰기는 자동 재시도하지 않습니다. 먼저 get_script로 현재 상태를 확인하세요.
+
+현재는 스크립트 삭제·아임웹 디자인 모드의 섹션/위젯 편집 기능을 제공하지 않습니다. CSS/JavaScript 적용 가능 범위는 테스트 페이지에서 검증해야 합니다.
 
 ## 1. 먼저 로컬 설정
 
@@ -30,12 +41,12 @@ IMWEB_SITE_CODE=연결할_사이트_코드
 
 COSA MCP 앱에서:
 
-1. 사이트 정보 **읽기**(`site-info:read`)만 활성화합니다.
-2. 서비스 URL·Redirect URI·API를 저장하면 **앱 테스트** 버튼이 활성화됩니다. 눌러 COSA 사이트를 선택하고, 읽기 권한을 확인한 뒤 **동의**합니다. 로그인한 계정이 소유자이고 이용 기간이 만료되지 않은 사이트만 표시됩니다. [공식 앱 테스트 안내](https://developers-docs.imweb.me/guide/프로세스-확인하기)
+1. 사이트 정보와 스크립트의 **읽기·쓰기** 권한을 활성화합니다.
+2. 서비스 URL·Redirect URI·API를 저장하면 **앱 테스트** 버튼이 활성화됩니다. 눌러 COSA 사이트를 선택하고, 사이트 정보·스크립트 권한을 확인한 뒤 **동의**합니다. 로그인한 계정이 소유자이고 이용 기간이 만료되지 않은 사이트만 표시됩니다. [공식 앱 테스트 안내](https://developers-docs.imweb.me/guide/프로세스-확인하기)
 3. 이 개발자센터에서는 localhost 서비스 URL 등록이 거절되는 것을 확인했습니다. 공개 HTTPS 개발 주소를 먼저 준비하고 서비스 URL에 입력합니다.
 4. Redirect URI는 `https://개발주소/oauth/callback`으로 등록합니다. 등록 URI와 `.env`의 `PUBLIC_BASE_URL` + `/oauth/callback`은 정확히 일치해야 합니다.
 
-공식 가이드상 특정 사이트 전용 앱은 테스트 연동 사이트에서만 API 사용이 가능합니다. 앱스토어의 일반 설치 흐름에서는 `연동완료` 처리에 `site-info:write`가 필요합니다. 이 MVP는 요청대로 그 API를 구현하지 않습니다. `연동중` 상태로 인해 읽기가 거절되면 쓰기 scope를 추가하지 말고 테스트 연결 상태를 확인하세요. 실제 COSA 사이트 사용 가능 여부는 개발자센터 상태와 실호출로 검증해야 합니다.
+공식 가이드상 특정 사이트 전용 앱은 테스트 연동 사이트에서만 API 사용이 가능합니다. 앱스토어의 일반 설치 흐름에서는 `연동완료` 처리에 `site-info:write`가 필요합니다. 이 MVP는 요청대로 그 API를 구현하지 않습니다. `연동중` 상태로 인해 읽기가 거절되면 테스트 연결 상태를 확인하세요. 실제 COSA 사이트 사용 가능 여부는 개발자센터 상태와 실호출로 검증해야 합니다.
 
 ## 3. 실행 → 승인 → 조회
 
@@ -45,7 +56,7 @@ npm start
 
 1. 브라우저에서 `http://localhost:3000/oauth/start`를 엽니다. `127.0.0.1` 대신 설정과 같은 `localhost` 주소를 사용하세요.
 2. `.env`의 `ADMIN_PASSWORD` 값을 화면에 입력합니다. 이것은 이 서버의 소유자 확인용 비밀번호입니다.
-3. 아임웹에서 해당 사이트와 **사이트 정보 읽기** 권한을 확인하고 승인합니다.
+3. 아임웹에서 해당 사이트와 **사이트 정보·스크립트 읽기·쓰기** 권한을 확인하고 승인합니다.
 4. 콜백 완료 화면에서 **사이트 정보 READ 테스트**를 누릅니다.
 5. `siteCode`와 `unitList` JSON이 나오면 실제 READ 성공입니다.
 
@@ -75,8 +86,8 @@ npm start
 
 두 OAuth 연결은 서로 다릅니다:
 
-- **서버 → 아임웹**: `IMWEB_CLIENT_ID`, `IMWEB_CLIENT_SECRET`, `site-info:read`
-- **ChatGPT → 이 서버**: `MCP_CLIENT_ID`, `MCP_CLIENT_SECRET`, `site:read`
+- **서버 → 아임웹**: `IMWEB_CLIENT_ID`, `IMWEB_CLIENT_SECRET`, `site-info:write script:write`
+- **ChatGPT → 이 서버**: `MCP_CLIENT_ID`, `MCP_CLIENT_SECRET`, `site:manage`
 
 ChatGPT에는 **아임웹 Client Secret을 입력하지 않습니다.**
 
@@ -84,7 +95,7 @@ ChatGPT에는 **아임웹 Client Secret을 입력하지 않습니다.**
 2. MCP URL: `https://개발주소/mcp`
 3. 인증 방식: **OAuth**, 정적 Client ID/Secret은 `.env`의 `MCP_CLIENT_ID` / `MCP_CLIENT_SECRET`을 입력합니다. 자동 클라이언트 등록은 제공하지 않습니다.
 4. ChatGPT가 안내하는 **정확한 callback URL**을 호스팅의 `MCP_REDIRECT_URIS`에 입력하고 서버를 다시 시작합니다. 여러 URL은 쉼표로 구분합니다. 와일드카드는 허용하지 않습니다.
-5. 연결을 시작하면 이 서버의 소유자 승인 화면이 나옵니다. `ADMIN_PASSWORD`로 읽기 전용 연결을 승인합니다.
+5. 연결을 시작하면 이 서버의 소유자 승인 화면이 나옵니다. `ADMIN_PASSWORD`로 조회·수정 연결을 승인합니다.
 6. 대화에서 COSA 앱을 선택하고 “COSA의 get_site_info 도구로 사이트 정보를 조회해줘”라고 요청합니다.
 
 아임웹용 콜백은 `/oauth/callback`, ChatGPT 콜백은 ChatGPT가 제공한 URL입니다. 서로 바꾸어 입력하지 마세요.
@@ -110,7 +121,7 @@ src/
   app.js           웹 화면, Imweb OAuth, HTTP 경로
   imweb.js         공식 Imweb API와 토큰 갱신
   token-store.js   토큰 암호화·원자적 저장
-  mcp.js           get_site_info 읽기 전용 도구
+  mcp.js           조회 및 스크립트 편집 도구
   mcp-auth.js      ChatGPT용 소유자 OAuth 승인
   security.js     쿠키·비교·만료 데이터 유틸리티
 scripts/setup.js   Secret을 출력하지 않는 로컬 초기 설정
@@ -134,7 +145,7 @@ npm run check
 - OAuth state 오류: 같은 브라우저에서 `/oauth/start`부터 다시 시작. 오래된 콜백을 새로고침하지 않기.
 - Redirect 오류: 아임웹 등록 주소와 `PUBLIC_BASE_URL` 확인.
 - 401 / 30101 / 30102: 토큰 갱신을 한 번 시도합니다. 재발 시 `/oauth/start`에서 재승인.
-- 403 / 30103: 사이트 테스트 연동과 `site-info:read` 확인. 쓰기 권한을 추가하지 않기.
+- 403 / 30103: 사이트 테스트 연동과 `site-info:write script:write` 확인. 설정한 두 API의 권한을 확인하기.
 - 429: 잠시 기다린 뒤 다시 조회. 자동 반복 호출하지 않기.
 - Host/Origin 오류: 설정한 도메인으로 접속하고 프록시의 Host 전달 설정 확인.
 - 재배포 후 연결 끊김: ChatGPT 다시 연결. 아임웹도 끊기면 영구디스크 경로·암호화 키 확인.
