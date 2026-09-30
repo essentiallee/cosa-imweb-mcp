@@ -32,8 +32,8 @@ COSA MCP 앱에서:
 
 1. 사이트 정보 **읽기**(`site-info:read`)만 활성화합니다.
 2. 서비스 URL·Redirect URI·API를 저장하면 **앱 테스트** 버튼이 활성화됩니다. 눌러 COSA 사이트를 선택하고, 읽기 권한을 확인한 뒤 **동의**합니다. 로그인한 계정이 소유자이고 이용 기간이 만료되지 않은 사이트만 표시됩니다. [공식 앱 테스트 안내](https://developers-docs.imweb.me/guide/프로세스-확인하기)
-3. 서비스 URL을 `http://localhost:3000`으로, Redirect URI를 `http://localhost:3000/oauth/callback`으로 등록합니다.
-4. localhost 등록을 허용하지 않는 경우 아래의 임시 HTTPS 배포 주소를 먼저 사용하세요. 등록 URI와 `.env`의 `PUBLIC_BASE_URL` + `/oauth/callback`은 정확히 일치해야 합니다.
+3. 이 개발자센터에서는 localhost 서비스 URL 등록이 거절되는 것을 확인했습니다. 공개 HTTPS 개발 주소를 먼저 준비하고 서비스 URL에 입력합니다.
+4. Redirect URI는 `https://개발주소/oauth/callback`으로 등록합니다. 등록 URI와 `.env`의 `PUBLIC_BASE_URL` + `/oauth/callback`은 정확히 일치해야 합니다.
 
 공식 가이드상 특정 사이트 전용 앱은 테스트 연동 사이트에서만 API 사용이 가능합니다. 앱스토어의 일반 설치 흐름에서는 `연동완료` 처리에 `site-info:write`가 필요합니다. 이 MVP는 요청대로 그 API를 구현하지 않습니다. `연동중` 상태로 인해 읽기가 거절되면 쓰기 scope를 추가하지 말고 테스트 연결 상태를 확인하세요. 실제 COSA 사이트 사용 가능 여부는 개발자센터 상태와 실호출로 검증해야 합니다.
 
@@ -140,3 +140,7 @@ npm run check
 - 재배포 후 연결 끊김: ChatGPT 다시 연결. 아임웹도 끊기면 영구디스크 경로·암호화 키 확인.
 
 공식 출처와 명세 차이는 [API-NOTES.md](docs/API-NOTES.md)에 기록했습니다.
+
+## 현재 로컬 개발 터널
+
+2026-09-30에 임시 Cloudflare HTTPS 터널을 연결했습니다. 실제 주소는 로컬 `.env`의 `PUBLIC_BASE_URL`에서 확인하세요. 서버와 터널이 실행되는 동안만 사용 가능하며, 터널을 새로 만들면 주소가 달라집니다. 변경 시 아임웹 등록 주소도 갱신해야 합니다. 아직 사이트 코드가 없으면 서버는 실행되지만 `/oauth/start`에서 설정 안내(HTTP 503)를 표시하고 인증은 시작하지 않습니다. 테스트 사이트 연결 후 `.env`에 사이트 코드를 입력하고 서버를 다시 시작하세요.

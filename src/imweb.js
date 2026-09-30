@@ -8,6 +8,7 @@ export class ImwebClient {
   // Serialize token exchange/rotation and reads: one process, one site, no refresh races.
   exclusive(fn) { const p = this.queue.then(fn); this.queue = p.catch(() => {}); return p; }
   authorizationUrl(state) {
+    if (!this.cfg.siteCode) throw Error('Set IMWEB_SITE_CODE before starting authorization.');
     const url = new URL('/oauth2/authorize', IMWEB_BASE);
     url.search = new URLSearchParams({ responseType: 'code', clientId: this.cfg.clientId, redirectUri: this.cfg.base + '/oauth/callback', scope: IMWEB_SCOPE, state, siteCode: this.cfg.siteCode });
     return url.href;

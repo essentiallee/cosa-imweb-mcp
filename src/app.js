@@ -23,10 +23,12 @@ export function createApp(cfg, imweb) {
   app.get('/health', (_req,res) => res.json({ status: 'ok' }));
   app.get('/', (_req,res) => res.type('html').send(page('<p>읽기 전용 Imweb MCP 서버입니다.</p><a href="/oauth/start">아임웹 연결 및 조회 확인</a>')));
   app.get('/oauth/start', (req,res) => {
+    if (!cfg.siteCode) return res.status(503).type('html').send(page('<p>HTTPS 주소 준비가 완료되었습니다. 아임웹에서 이 주소를 등록하고 앱 테스트를 연결한 다음, 로컬 .env의 IMWEB_SITE_CODE를 입력하고 서버를 다시 시작하세요.</p>'));
     const nonce = random(); setCookie(res, 'cosa_setup', nonce, secure);
     res.type('html').send(page(`<p>.env의 ADMIN_PASSWORD를 입력하여 아임웹 연결을 시작하세요.</p><form method="post" action="/oauth/start"><input type="hidden" name="nonce" value="${nonce}"><input type="password" name="password" autocomplete="current-password" required><button>아임웹 읽기 권한 연결</button></form>`));
   });
   app.post('/oauth/start', loginLimit, (req,res) => {
+    if (!cfg.siteCode) return res.status(503).send('Set IMWEB_SITE_CODE locally and restart the server.');
     if (!equal(req.body.nonce, cookie(req,'cosa_setup')) || !equal(req.body.password, cfg.adminPassword)) return res.status(403).send('Setup authorization failed');
     const state = random(), browser = random(); states.set(digest(state), digest(browser), 600000);
     setCookie(res, 'cosa_oauth', browser, secure);

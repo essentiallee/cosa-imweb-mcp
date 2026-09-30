@@ -64,8 +64,8 @@ test('AES-GCM store roundtrip, permissions and key/site binding',async()=>{
  await assert.rejects(new TokenStore(file,'ab'.repeat(32),'other').load(),/decrypt/);
  }finally{await rm(dir,{recursive:true,force:true});}
 });
-async function fixture(t){
- const local={...cfg};const calls=[];
+async function fixture(t, overrides={}){
+ const local={...cfg,...overrides};const calls=[];
  const imweb={authorizationUrl:state=>'https://openapi.imweb.me/oauth2/authorize?state='+state,exchange:async code=>calls.push(code),getSiteInfo:async()=>({siteCode:'S_TEST',unitList:[]})};
  const server=http.createServer();
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -123,4 +123,13 @@ test('Real MCP SDK client: OAuth discovery, consent, PKCE, replay prevention and
 test('Configuration blocks missing secrets and public plain HTTP',()=>{
  assert.throws(()=>config({}),/Missing/);
  assert.throws(()=>config({PUBLIC_BASE_URL:'http://example.com'}),/HTTPS/);
+});
+
+test('Missing site code allows health but blocks Imweb authorization',async t=>{
+ const {req,calls}=await fixture(t,{siteCode:''});
+ assert.equal((await req('/health')).status,200);
+ assert.equal((await req('/oauth/start')).status,503);
+ assert.equal((await req('/oauth/start',form({password:cfg.adminPassword}))).status,503);
+ assert.deepEqual(calls,[]);
+ assert.throws(()=>new ImwebClient({...cfg,siteCode:''},memoryStore()).authorizationUrl('state'),/IMWEB_SITE_CODE/);
 });
