@@ -174,3 +174,8 @@ test('Script writes validate unit/revision, back up contents, and never retry mu
  assert.equal((await imweb.saveScript({...empty,scriptContent:'new',expectedRevision:empty.revision},true)).success,true);
  } finally {await rm(dir,{recursive:true,force:true});}
 });
+
+test('Nested Imweb errors retain numeric diagnostics without upstream text',async()=>{
+ const client=new ImwebClient(cfg,memoryStore(token()),async()=>response({error:{code:30173,message:'DO-NOT-EXPOSE'}},400));
+ await assert.rejects(client.getSiteInfo(),e=>e.code===30173 && e.message.includes('script format') && !e.message.includes('DO-NOT-EXPOSE'));
+});

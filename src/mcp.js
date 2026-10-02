@@ -17,7 +17,7 @@ export function createMcp(imweb) {
   }
   register('get_site_info', 'COSA 사이트 정보 조회', 'Read COSA site and unit information.', {}, true, () => imweb.getSiteInfo());
   register('get_script', '스크립트 조회', 'Read the script at a unit and position before editing. Returns revision for conflict detection; absent script has exists=false.', target, true, a => imweb.getScript(a.unitCode,a.position));
-  const edit = { ...target, scriptContent: z.string().min(1).max(40000).describe('Complete replacement script including unrelated existing code that must be preserved'), expectedRevision: z.string().regex(/^[a-f0-9]{64}$/).describe('Revision returned by the most recent get_script') };
+  const edit = { ...target, scriptContent: z.string().min(1).max(40000).describe('Complete HTML script tag(s). For CSS/fonts, use JavaScript inside a script tag to create style/link elements; bare style/link payloads were rejected by Imweb (30173). Preserve unrelated existing code'), expectedRevision: z.string().regex(/^[a-f0-9]{64}$/).describe('Revision returned by the most recent get_script') };
   register('create_script', '스크립트 등록', 'Create a script at an EMPTY position. Affects the live site. Read first and obtain user approval of the concrete change.', edit, false, a => imweb.saveScript(a,true));
   register('update_script', '스크립트 수정', 'Replace the existing script at a position. Affects the live site. Read first, preserve other code, and obtain approval. Encrypted backup is saved before writing.', edit, false, a => imweb.saveScript(a,false));
   return server;

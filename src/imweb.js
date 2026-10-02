@@ -5,7 +5,9 @@ export const IMWEB_BASE = 'https://openapi.imweb.me';
 export const IMWEB_SCOPE = 'site-info:write script:write';
 const ALLOWED_SCOPES = new Set(['site-info:read','site-info:write','script:read','script:write']);
 export class ImwebError extends Error {
-  constructor(status, code) { super(`Imweb request failed (HTTP ${status}, code ${/^\d+$/.test(String(code)) ? code : 'unknown'}). Check app connection and permissions.`); this.status = status; this.code = Number(code); }
+  constructor(status, code) { super(`Imweb request failed (HTTP ${status}, code ${/^\d+$/.test(String(code)) ? code : 'unknown'}). Check app connection and permissions.`); this.status = status; this.code = Number(code);
+    const hints = { 30173: ' Imweb rejected the script format. Check allowed HTML/script tags.', 30174: ' A script already exists at this position. Read it before updating.', 30175: ' No script exists at this position. Read it before creating.', 30103: ' The token lacks the required scope. Reauthorize the app.' };
+    this.message += hints[this.code] || '';  }
 }
 export class ImwebClient {
   constructor(cfg, store, fetcher = fetch) { this.cfg = cfg; this.store = store; this.fetch = fetcher; this.queue = Promise.resolve(); }
@@ -21,7 +23,7 @@ export class ImwebClient {
     let res, payload;
     try { res = await this.fetch(IMWEB_BASE + path, { ...init, redirect: 'error', signal: AbortSignal.timeout(15000) }); } catch { throw Error('Imweb network request failed; retry later'); }
     try { payload = await res.json(); } catch { throw Error('Imweb returned an invalid response'); }
-    if (!res.ok || payload.errorCode || (payload.statusCode && payload.statusCode !== 200)) throw new ImwebError(res.status, payload.errorCode);
+    if (!res.ok || payload.errorCode || (payload.statusCode && payload.statusCode !== 200)) throw new ImwebError(res.status, payload.errorCode ?? payload.code ?? payload.error?.errorCode ?? payload.error?.code ?? payload.data?.errorCode ?? payload.data?.code);
     if (!Object.hasOwn(payload, 'data')) throw Error('Imweb response is missing data');
     return payload.data;
   }
